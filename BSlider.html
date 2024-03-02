@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  .arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    z-index: 1;
+  }
+  .arrow-left {
+    left: 30px;
+  }
+  .arrow-right {
+    right: 30px;
+  }
+  .slide {
+    display: flex;
+    justify-content: center;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<div style="width:340px;margin:auto">
+    <div id="slider1">
+        <div class="slider">
+            <div class="slide"><img data-src="https://via.placeholder.com/300x200/cccccc/ffffff?text=Image+1"></div>
+            <div class="slide"><img data-src="https://via.placeholder.com/300x200/cccccc/ffffff?text=Image+2"></div>
+            <div class="slide"><img data-src="https://via.placeholder.com/300x200/cccccc/ffffff?text=Image+3"></div>
+            <div class="slide"><img data-src="https://via.placeholder.com/300x200/cccccc/ffffff?text=Image+4"></div>
+            <div class="slide"><img data-src="https://via.placeholder.com/300x200/cccccc/ffffff?text=Image+5"></div>
+        </div>
+        <div class="arrow arrow-left" onclick="slider.prevSlide()">&#10094;</div>
+        <div class="arrow arrow-right" onclick="slider.nextSlide()">&#10095;</div>
+    </div>
+</div>
+<script>
+let BSlider =  function(containerId) {
+
+    let container = null;
+    let slider = null;
+    let slides = null;
+    let isDragging = false;
+    let startPosition = 0;
+    let currentTranslate = 0;
+    let prevTranslate = 0;
+    let currentIndex = 0;
+    let containerMaxWidth = 0;
+
+    init();
+   
+    function init() {
+       
+        container = document.getElementById(containerId);
+        slider = container.querySelector('.slider');
+        slides = container.querySelectorAll('.slide');
+
+        container.style.width = "100%";
+        container.style.overflow = "hidden";
+        container.style.position = "relative";
+        container.style.margin = "auto";
+        slider.style.display = "flex";
+        slider.style.transition="transform 0.5s ease";
+
+        containerMaxWidth = 0;
+        preloadImage(0);
+
+        slides.forEach((slide, index) => {
+            slide.style.flex = "0 0 100%";
+            slide.style.position = "relative";
+            if(slide.offsetWidth > containerMaxWidth) {
+                containerMaxWidth = slide.offsetWidth;
+            }
+          
+
+            slide.addEventListener('touchstart', touchStart(index));
+            slide.addEventListener('touchend', touchEnd);
+            slide.addEventListener('touchmove', touchMove);
+        });
+    }
+  
+
+    function touchStart(index) {
+        return function(event) {
+            currentIndex = index;
+            startPosition = event.touches[0].clientX;
+            isDragging = true;
+            slider.style.transition = 'none';
+            prevTranslate = currentTranslate;
+            
+        };
+    }
+
+    function touchMove(event) {
+        if (!isDragging) return;
+        const currentPosition = event.touches[0].clientX;
+        const diff = currentPosition - startPosition;
+        currentTranslate = prevTranslate + diff;
+        console.log(diff);
+        if(diff<0) {
+            console.log("loading next one:" + currentIndex+1);
+            preloadImage(currentIndex+1);
+        }
+        slider.style.transform = `translateX(${currentTranslate}px)`;
+    }
+
+    function touchEnd() {
+        isDragging = false;
+        slider.style.transition = 'transform 0.5s ease';
+        const threshold = 100;
+        const dragDistance = currentTranslate - prevTranslate;
+
+        if (dragDistance < -threshold && currentIndex < slides.length - 1) {
+            currentIndex++;
+        }
+        if (dragDistance > threshold && currentIndex > 0) {
+            currentIndex--;
+        }
+
+        goToSlide(currentIndex);
+    }
+
+    function goToSlide(index) {
+        currentTranslate = index * - containerMaxWidth;
+        slider.style.transform = `translateX(${currentTranslate}px)`;
+        prevTranslate = currentTranslate;
+        preloadImage(index);
+    }
+
+    function preloadImage(index) {
+        if (index < slides.length) {
+            const image = slides[index].querySelector('img');
+            if (!image.src) {
+            image.src = image.dataset.src;
+            }
+        }
+    }
+
+    this.nextSlide = function() {
+        if (currentIndex < slides.length - 1) {
+            currentIndex++;
+        }
+        goToSlide(currentIndex);
+    }
+
+    this.prevSlide = function() {
+        if (currentIndex > 0) {
+            currentIndex--;
+        }
+        goToSlide(currentIndex);
+    }
+}
+
+const slider = new BSlider('slider1');
+</script>
+
+</body>
+</html>
