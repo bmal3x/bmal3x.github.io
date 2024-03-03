@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  .arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    z-index: 1;
+  }
+  .arrow-left {
+    left: 30px;
+  }
+  .arrow-right {
+    right: 30px;
+  }
+  .slide {
+    display: flex;
+    justify-content: center;
+    text-align: center;
+  }
+  .BSlider-pagination {
+    bottom: 20px;
+    position: relative;
+    display: flex;
+    margin: 0 auto;
+    width: 50px;
+  }
+  @media (max-width: 600px) {
+    .arrow {
+        display: none;
+    }
+}
+</style>
+</head>
+<body>
+<div style="width:340px;margin:auto">
+    <div id="slider1">
+        <div class="slider">
+            <div class="slide"><img data-src="https://via.placeholder.com/300x200/cccccc/ffffff?text=Image+1"></div>
+            <div class="slide"><img data-src="https://via.placeholder.com/300x200/cccccc/ffffff?text=Image+2"></div>
+            <div class="slide"><img data-src="https://via.placeholder.com/300x200/cccccc/ffffff?text=Image+3"></div>
+            <div class="slide"><img data-src="https://via.placeholder.com/300x200/cccccc/ffffff?text=Image+4"></div>
+            <div class="slide"><img data-src="https://via.placeholder.com/300x200/cccccc/ffffff?text=Image+5"></div>
+            <div class="slide"><img data-src="https://via.placeholder.com/300x200/cccccc/ffffff?text=Image+6"></div>
+            <div class="slide"><img data-src="https://via.placeholder.com/300x200/cccccc/ffffff?text=Image+7"></div>
+        </div>
+        <div class="arrow arrow-left">&#10094;</div>
+        <div class="arrow arrow-right">&#10095;</div>
+    </div>
+</div>
+<script>
+
+let BSlider =  function(containerId) {
+
+    let container = null;
+    let slider = null;
+    let slides = null;
+    let isDragging = false;
+    let startPosition = 0;
+    let currentTranslate = 0;
+    let prevTranslate = 0;
+    let currentIndex = 0;
+    let containerMaxWidth = 0;
+    let pagination = null;
+    let lastIndex = 0;
+
+    init();
+    createPagination();
+    
+   
+    function init() {
+       
+        container = document.getElementById(containerId);
+        slider = container.querySelector('.slider');
+        slides = container.querySelectorAll('.slide');
+
+        container.style.width = "100%";
+        container.style.overflow = "hidden";
+        container.style.position = "relative";
+        container.style.margin = "auto";
+        slider.style.display = "flex";
+        slider.style.transition="transform 0.5s ease";
+       
+     
+
+        containerMaxWidth = 0;
+        preloadImage(0);
+       
+
+        slides.forEach((slide, index) => {
+            slide.style.flex = "0 0 100%";
+            slide.style.position = "relative";
+            if(slide.offsetWidth > containerMaxWidth) {
+                containerMaxWidth = slide.offsetWidth;
+            }
+            slide.addEventListener('touchstart', touchStart(index));
+            slide.addEventListener('touchend', touchEnd);
+            slide.addEventListener('touchmove', touchMove);
+        });
+
+        let arrowLeft = container.querySelector('.arrow-left');
+        let arrowRight = container.querySelector('.arrow-right');
+        if(slides.length<2) {
+            arrowLeft.style.display = "none";
+            arrowRight.style.display = "none";
+        } else {
+            arrowLeft.addEventListener('click', prevSlide);
+            arrowRight.addEventListener('click',nextSlide);
+        }
+    }
+  
+
+    function touchStart(index) {
+        return function(event) {
+            currentIndex = index;
+            startPosition = event.touches[0].clientX;
+            isDragging = true;
+            slider.style.transition = 'none';
+            prevTranslate = currentTranslate;
+            
+        };
+    }
+
+    function touchMove(event) {
+        if (!isDragging) return;
+        const currentPosition = event.touches[0].clientX;
+        const diff = currentPosition - startPosition;
+        currentTranslate = prevTranslate + diff;
+        console.log(diff);
+        if(diff<0) {
+            console.log("loading next one:" + currentIndex+1);
+            preloadImage(currentIndex+1);
+        }
+        slider.style.transform = `translateX(${currentTranslate}px)`;
+    }
+
+    function touchEnd() {
+        isDragging = false;
+        slider.style.transition = 'transform 0.5s ease';
+        const threshold = 100;
+        const dragDistance = currentTranslate - prevTranslate;
+
+        if (dragDistance < -threshold && currentIndex < slides.length - 1) {
+            nextSlide();
+        }
+        if (dragDistance > threshold && currentIndex > 0) {
+
+            prevSlide();
+        }
+        translateSlide(currentIndex);
+    }
+    function translateSlide(index) {
+        currentTranslate = index * - containerMaxWidth;
+        slider.style.transform =  `translateX(${currentTranslate}px)`;
+        prevTranslate = currentTranslate;
+    }
+
+    function goToSlide(index) {
+        translateSlide(index);
+        preloadImage(index);
+        setActivePage();
+    }
+
+    function preloadImage(index) {
+        if (index < slides.length) {
+            const image = slides[index].querySelector('img');
+            if (!image.src) {
+            image.src = image.dataset.src;
+            }
+        }
+    }
+
+    function nextSlide() {
+        lastIndex = currentIndex;
+        if (currentIndex < slides.length - 1) {
+            currentIndex++;
+        }
+        goToSlide(currentIndex);
+        
+    }
+
+    function prevSlide() {
+        lastIndex = currentIndex;
+        if (currentIndex > 0) {
+            currentIndex--;
+        }
+        goToSlide(currentIndex);
+        
+    }
+
+    function createPagination() {
+
+        let dots = 0;
+        if(slides.length>1) {
+            if(slides.length <= 5) {
+                dots = slides.length;
+            } else {
+                dots = 5
+            }
+        }
+        let parentElement = document.getElementById(containerId);
+        pagination = document.createElement('div');
+        pagination.classList.add('BSlider-pagination');
+      
+        parentElement.appendChild(pagination);
+
+        for (let i = 0; i < dots; i++) {
+            const dot = document.createElement('div');
+            dot.classList.add('BSlider-pagination-dot');
+            dot.style.backgroundColor = 'white';
+            dot.style.opacity = i === 0 ? 1 : 0.5;
+            dot.style.borderRadius = '30%'; 
+            dot.style.width = '10px'; 
+            dot.style.height = '5px'; 
+            dot.style.margin = '1px';
+           
+            pagination.appendChild(dot);
+        }
+        setActivePage(currentIndex);
+
+    }
+
+    function setActivePage() {
+        let dotIndexSelected = null;
+        
+        let dots = pagination.querySelectorAll('.BSlider-pagination-dot');
+        if(slides.length<=3) {
+            dotIndexSelected = currentIndex;
+        } else {
+            if(slides.length>5) {
+                if(currentIndex < 2) {
+                    console.log('1s dots...');
+                    dotIndexSelected = currentIndex;
+                } 
+                if(currentIndex > slides.length-3) {
+                    console.log('currentIndex:'+currentIndex);
+                    console.log('slides.length:' + slides.length);
+                    console.log(slides.length-currentIndex);
+                    dotIndexSelected = 4 - (slides.length-currentIndex)+1;
+                }
+                if(dotIndexSelected==null) {
+                    console.log('midle dots...');
+                    dotIndexSelected = 2;
+                }
+            } else {
+                dotIndexSelected = currentIndex;
+            }
+        }
+        dots.forEach((dot, index) => {
+            if(index == dotIndexSelected) {
+                dot.style.opacity = 1;
+                dot.style.width = '20px';
+            } else {
+                dot.style.opacity = 0.5;
+                dot.style.width = '10px';
+            }
+        });
+    }
+}
+const slider = new BSlider('slider1');
+
+</script>
+
+</body>
+</html>
